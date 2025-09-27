@@ -8,7 +8,6 @@ app.use(express.static('public'));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
-// In-memory "database"
 let users = [];
 let nextId = 1;
 
@@ -52,42 +51,37 @@ app.post('/api/users/:_id/exercises', (req, res) => {
     return res.status(404).json({ error: 'User not found' });
   }
 
-  // --- DATE HANDLING FIX ---
-  // If no date is provided, use the current date.
-  // Otherwise, parse the provided date string.
-  let dateObj;
+  // Handle the date
+  let exerciseDate;
   if (date) {
-    // The yyyy-mm-dd format is parsed as UTC midnight. We add the timezone offset
-    // to ensure that when toDateString() is called, it reflects the correct local date.
-    dateObj = new Date(date);
+    exerciseDate = new Date(date);
   } else {
-    dateObj = new Date();
+    exerciseDate = new Date();
   }
   
-  // Check for invalid date
-  if (isNaN(dateObj.getTime())) {
-    // Fallback to current date if provided date is invalid
-    dateObj = new Date();
-  }
-
+  // Store the raw date object in the log
   const exercise = {
     description: description,
     duration: parseInt(duration),
-    date: dateObj.toDateString() // Formats to "Day Mon dd yyyy"
+    date: exerciseDate  // Store as Date object
   };
 
   user.log.push(exercise);
 
+  // Format the date for response (remove timezone info to avoid UTC offset issues)
+  const dateString = new Date(exerciseDate.toISOString().split('T')[0]).toDateString();
+
+  // Return response
   res.json({
     username: user.username,
     description: exercise.description,
     duration: exercise.duration,
-    date: exercise.date,
+    date: dateString,
     _id: user._id
   });
 });
 
-// Get user's exercise logs
+// Get logs
 app.get('/api/users/:_id/logs', (req, res) => {
   const userId = req.params._id;
   const { from, to, limit } = req.query;
@@ -99,36 +93,38 @@ app.get('/api/users/:_id/logs', (req, res) => {
 
   let filteredLog = [...user.log];
 
-  // --- FILTERING FIX ---
-  // Apply date filters if provided, handling timezones correctly.
+  // Filter by from date
   if (from) {
     const fromDate = new Date(from);
-    if (!isNaN(fromDate.getTime())) {
-      filteredLog = filteredLog.filter(ex => new Date(ex.date) >= fromDate);
-    }
+    filteredLog = filteredLog.filter(ex => {
+      const exerciseDate = new Date(ex.date);
+      return exerciseDate >= fromDate;
+    });
   }
 
+  // Filter by to date  
   if (to) {
     const toDate = new Date(to);
-    if (!isNaN(toDate.getTime())) {
-      filteredLog = filteredLog.filter(ex => new Date(ex.date) <= toDate);
-    }
+    filteredLog = filteredLog.filter(ex => {
+      const exerciseDate = new Date(ex.date);
+      return exerciseDate <= toDate;
+    });
   }
 
-  // Apply limit if provided
+  // Apply limit
   if (limit) {
-    const limitNum = parseInt(limit);
-    if (!isNaN(limitNum) && limitNum > 0) {
-      filteredLog = filteredLog.slice(0, limitNum);
-    }
+    filteredLog = filteredLog.slice(0, parseInt(limit));
   }
-  
+
+  // Format all dates in the log to avoid timezone issues
   const formattedLog = filteredLog.map(ex => ({
     description: ex.description,
     duration: ex.duration,
-    date: ex.date 
+    // Remove timezone info before converting to date string
+    date: new Date(new Date(ex.date).toISOString().split('T')[0]).toDateString()
   }));
 
+  // Return the response
   res.json({
     _id: user._id,
     username: user.username,
