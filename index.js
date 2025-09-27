@@ -1,154 +1,142 @@
-const express = require('express')
-const app = express()
-const cors = require('cors')
-require('dotenv').config()
+const express = require('express');
+const app = express();
+const cors = require('cors');
+require('dotenv').config();
 
-// Middleware
-app.use(cors())
-app.use(express.static('public'))
-app.use(express.urlencoded({ extended: true }))
-app.use(express.json())
+app.use(cors());
+app.use(express.static('public'));
+app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
 
-// In-memory storage (no MongoDB required)
+// In-memory "database"
 let users = [];
-let exercises = [];
-let userIdCounter = 1;
-let exerciseIdCounter = 1;
+let nextId = 1;
 
-// Routes
 app.get('/', (req, res) => {
-  res.sendFile(__dirname + '/views/index.html')
-})
+  res.sendFile(__dirname + '/views/index.html');
+});
 
-// Create new user
+// Create a new user
 app.post('/api/users', (req, res) => {
   const { username } = req.body;
-  
   if (!username) {
     return res.status(400).json({ error: 'Username is required' });
   }
-  
-  // Check if username already exists
-  const existingUser = users.find(user => user.username === username);
-  if (existingUser) {
-    return res.status(400).json({ error: 'Username already taken' });
-  }
-  
-  const newUser = {
-    username: username,
-    _id: userIdCounter.toString()
-  };
-  
+  const userId = nextId.toString();
+  const newUser = { username, _id: userId, log: [] };
   users.push(newUser);
-  userIdCounter++;
-  
-  res.json(newUser);
-})
+  nextId++;
+  res.json({ username: newUser.username, _id: newUser._id });
+});
 
 // Get all users
 app.get('/api/users', (req, res) => {
-  res.json(users);
-})
+  const userList = users.map(user => ({
+    username: user.username,
+    _id: user._id
+  }));
+  res.json(userList);
+});
 
 // Add exercise
 app.post('/api/users/:_id/exercises', (req, res) => {
-  const { _id } = req.params;
-  let { description, duration, date } = req.body;
-  
-  // Find user
-  const user = users.find(u => u._id === _id);
-  if (!user) {
-    return res.status(404).json({ error: 'User not found' });
-  }
-  
-  // Validate required fields
+  const userId = req.params._id;
+  const { description, duration, date } = req.body;
+
   if (!description || !duration) {
     return res.status(400).json({ error: 'Description and duration are required' });
   }
-  
-  // Parse duration to number
-  duration = parseInt(duration);
-  if (isNaN(duration)) {
-    return res.status(400).json({ error: 'Duration must be a number' });
-  }
-  
-  // Parse date or use current date
-  let exerciseDate;
-  if (date) {
-    exerciseDate = new Date(date);
-    if (isNaN(exerciseDate.getTime())) {
-      return res.status(400).json({ error: 'Invalid date format. Use yyyy-mm-dd' });
-    }
-  } else {
-    exerciseDate = new Date();
-  }
-  
-  // Create exercise
-  const exercise = {
-    _id: exerciseIdCounter.toString(),
-    userId: _id,
-    description: description,
-    duration: duration,
-    date: exerciseDate
-  };
-  
-  exercises.push(exercise);
-  exerciseIdCounter++;
-  
-  res.json({
-    _id: user._id,
-    username: user.username,
-    description: exercise.description,
-    duration: exercise.duration,
-    date: exercise.date.toDateString()
-  });
-})
 
-// Get exercise log
-app.get('/api/users/:_id/logs', (req, res) => {
-  const { _id } = req.params;
-  const { from, to, limit } = req.query;
-  
-  // Find user
-  const user = users.find(u => u._id === _id);
+  const user = users.find(u => u._id === userId);
   if (!user) {
     return res.status(404).json({ error: 'User not found' });
   }
-  
-  // Get user's exercises
-  let userExercises = exercises.filter(ex => ex.userId === _id);
-  
-  // Apply date filters
-  if (from) {
-    const fromDate = new Date(from);
-    userExercises = userExercises.filter(ex => new Date(ex.date) >= fromDate);
+
+  // --- DATE HANDLING FIX ---
+  // If no date is provided, use the current date.
+  // Otherwise, parse the provided date string.
+  let dateObj;
+  if (date) {
+    // The yyyy-mm-dd format is parsed as UTC midnight. We add the timezone offset
+    // to ensure that when toDateString() is called, it reflects the correct local date.
+    dateObj = new Date(date);
+  } else {
+    dateObj = new Date();
   }
   
-  if (to) {
-    const toDate = new Date(to);
-    userExercises = userExercises.filter(ex => new Date(ex.date) <= toDate);
+  // Check for invalid date
+  if (isNaN(dateObj.getTime())) {
+    // Fallback to current date if provided date is invalid
+    dateObj = new Date();
   }
-  
-  // Apply limit
-  if (limit) {
-    userExercises = userExercises.slice(0, parseInt(limit));
-  }
-  
-  // Format log entries
-  const log = userExercises.map(exercise => ({
+
+  const exercise = {
+    description: description,
+    duration: parseInt(duration),
+    date: dateObj.toDateString() // Formats to "Day Mon dd yyyy"
+  };
+
+  user.log.push(exercise);
+
+  res.json({
+    username: user.username,
     description: exercise.description,
     duration: exercise.duration,
-    date: new Date(exercise.date).toDateString()
-  }));
+    date: exercise.date,
+    _id: user._id
+  });
+});
+
+// Get user's exercise logs
+app.get('/api/users/:_id/logs', (req, res) => {
+  const userId = req.params._id;
+  const { from, to, limit } = req.query;
+
+  const user = users.find(u => u._id === userId);
+  if (!user) {
+    return res.status(404).json({ error: 'User not found' });
+  }
+
+  let filteredLog = [...user.log];
+
+  // --- FILTERING FIX ---
+  // Apply date filters if provided, handling timezones correctly.
+  if (from) {
+    const fromDate = new Date(from);
+    if (!isNaN(fromDate.getTime())) {
+      filteredLog = filteredLog.filter(ex => new Date(ex.date) >= fromDate);
+    }
+  }
+
+  if (to) {
+    const toDate = new Date(to);
+    if (!isNaN(toDate.getTime())) {
+      filteredLog = filteredLog.filter(ex => new Date(ex.date) <= toDate);
+    }
+  }
+
+  // Apply limit if provided
+  if (limit) {
+    const limitNum = parseInt(limit);
+    if (!isNaN(limitNum) && limitNum > 0) {
+      filteredLog = filteredLog.slice(0, limitNum);
+    }
+  }
   
+  const formattedLog = filteredLog.map(ex => ({
+    description: ex.description,
+    duration: ex.duration,
+    date: ex.date 
+  }));
+
   res.json({
     _id: user._id,
     username: user.username,
-    count: log.length,
-    log: log
+    count: formattedLog.length,
+    log: formattedLog
   });
-})
+});
 
 const listener = app.listen(process.env.PORT || 3000, () => {
-  console.log('Your app is listening on port ' + listener.address().port)
-})
+  console.log('Your app is listening on port ' + listener.address().port);
+});

@@ -39,7 +39,6 @@ form {
   padding: 25px;
   background: #f7fafc;
   border-radius: 10px;
-  border-left: 4px solid #667eea;
 }
 
 input {
@@ -54,7 +53,6 @@ input {
 
 input:focus {
   outline: none;
-  border-color: #667eea;
 }
 
 input[type=submit] {
@@ -80,7 +78,6 @@ code {
   border-radius: 6px;
   display: inline-block;
   margin: 5px 0;
-  border-left: 3px solid #667eea;
 }
 
 p {
@@ -97,7 +94,6 @@ strong {
   background: #f0fff4;
   padding: 15px;
   border-radius: 8px;
-  border-left: 4px solid #48bb78;
   margin-top: 20px;
 }
 
