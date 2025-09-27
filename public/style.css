@@ -3,57 +3,115 @@
 }
 
 body {
-  font-family:sans-serif;
+  font-family: 'Roboto', sans-serif;
   margin: 25px;
-  color: #222;
-  background-color: #f5f5f5;
+  color: #333;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  min-height: 100vh;
+}
+
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+  background: white;
+  padding: 30px;
+  border-radius: 15px;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.1);
 }
 
 h1 {
   font-weight: bold;
-  
+  color: #4a5568;
+  text-align: center;
+  margin-bottom: 30px;
+  font-size: 2.5em;
 }
 
-p {
-  max-width: 900px;
+h2 {
+  color: #2d3748;
+  margin-top: 0;
+  border-bottom: 2px solid #e2e8f0;
+  padding-bottom: 10px;
 }
 
 form {
-  margin-bottom: 25px;
-  padding: 15px;
-  background-color: #87D37C;
-  display: inline-block;
-  width: 100%;
-  max-width: 340px;
-  border-radius: 5px;
+  margin-bottom: 30px;
+  padding: 25px;
+  background: #f7fafc;
+  border-radius: 10px;
+  border-left: 4px solid #667eea;
 }
 
 input {
   display: block;
-  margin-bottom: 10px;
-  padding: 5px;
+  margin-bottom: 15px;
+  padding: 12px;
   width: 100%;
-  border: 1px solid lightgrey;
-  border-radius: 3px;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
   font-size: 16px;
+}
+
+input:focus {
+  outline: none;
+  border-color: #667eea;
 }
 
 input[type=submit] {
   font-size: 16px;
-  border-radius: 3px;
-  background-color: #E4F1FE;
-  border: 1px solid grey;
-  box-shadow: 2px 2px #999;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
   cursor: pointer;
+  font-weight: bold;
+  letter-spacing: 0.5px;
 }
 
 input[type=submit]:hover {
-  background-color: #FFFEC4;
+  background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
 }
 
 code {
-  font-family: monospace;
-  font-size: 1.2em;
-  background-color: #FFFEC4;
-  padding: 2px;
+  font-family: 'Courier New', monospace;
+  font-size: 1.1em;
+  background-color: #edf2f7;
+  padding: 8px 12px;
+  border-radius: 6px;
+  display: inline-block;
+  margin: 5px 0;
+  border-left: 3px solid #667eea;
+}
+
+p {
+  max-width: 900px;
+  line-height: 1.6;
+  color: #4a5568;
+}
+
+strong {
+  color: #2d3748;
+}
+
+.container > p:last-of-type {
+  background: #f0fff4;
+  padding: 15px;
+  border-radius: 8px;
+  border-left: 4px solid #48bb78;
+  margin-top: 20px;
+}
+
+/* Responsive design */
+@media (max-width: 600px) {
+  body {
+    margin: 10px;
+  }
+  
+  .container {
+    padding: 20px;
+  }
+  
+  h1 {
+    font-size: 2em;
+  }
 }
